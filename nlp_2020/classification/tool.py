@@ -1,39 +1,63 @@
+import os
+import logging
+import jieba
+
+import torch
 import torch.nn as nn
 from torchtext.data import Field, LabelField, TabularDataset
 
+logger = logging.getLogger(__name__)
 
-#TODO: implement for train/dev/test
-#TODO: replace `tokenize` by jieba tokenizer
-def build_dataset(fpath, mode='train'):
-    # For more info about torchtext.data,
-    # turn to https://pytorch.org/text/data.html
-    tokenize = lambda x: x.split()
+
+def preprocessing(label2id):
+    pass
+
+
+def build_and_cache_dataset(args, mode='train'):
+
     ID = Field(sequential=False, use_vocab=False)
-    # NOTE: CATEGORY_CODE could be ignored
-    CATEGORY_CODE = LabelField(sequential=False, use_vocab=False)
-    CATEGORY = LabelField(sequential=False, use_vocab=False)
+    CATEGORY = LabelField(sequential=False, use_vocab=True, is_target=True)
     NEWS = Field(
         sequential=True,
-        use_vocab=False,
-        tokenize=tokenize,
+        tokenize=jieba.lcut,
         include_lengths=True,
     )
 
-    # Format of dataset:
-    # 6552431613437805063_!_102_!_news_entertainment_!_谢娜为李浩菲澄清网络谣言，之后她的两个行为给自己加分_!_佟丽娅,网络谣言,快乐大本营,李浩菲,谢娜,观众们
     fields = [
         ('id', ID),
-        ('category_code', CATEGORY_CODE),
+        (None, None),
         ('category', CATEGORY),
         ('news', NEWS),
-        (None, None),
     ]
 
-    # Since dataset is split by `_!_`.
+    logger.info("Creating features from dataset file at %s", args.data_dir)
+
+    # Since dataset is split by `\t`.
     dataset = TabularDataset(
-        fpath,
+        os.path.join(args.data_dir, f'{mode}.csv'),
         format='csv',
         fields=fields,
-        csv_reader_params={'delimiter': '_!_'},
+        csv_reader_params={'delimiter': '\t'},
     )
-    return (ID, CATEGORY, NEWS), dataset
+
+    features = ((ID, CATEGORY, NEWS), dataset)
+    return features
+
+
+def save_model(args, model, tokenizer, optimizer, scheduler, global_step):
+    # Save model checkpoint
+    output_dir = os.path.join(args.output_dir, "ckpt-{}".format(global_step))
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Take care of distributed/parallel training
+    model_to_save = (model.module if hasattr(model, "module") else model)
+    model_to_save.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    torch.save(args, os.path.join(output_dir, "training_args.bin"))
+    logger.info("Saving model checkpoint to %s", output_dir)
+    logger.info("Saving optimizer and scheduler states to %s", output_dir)
+    torch.save(optimizer.state_dict(), os.path.join(output_dir,
+                                                    "optimizer.pt"))
+    torch.save(scheduler.state_dict(), os.path.join(output_dir,
+                                                    "scheduler.pt"))

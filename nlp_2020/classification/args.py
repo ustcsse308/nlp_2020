@@ -13,40 +13,36 @@ def get_args():
         required=True,
         help="The input data dir.",
     )
-    parser.add_argument("--model_name_or_path",
-                        default=None,
-                        type=str,
-                        required=True,
-                        help="Path to pre-trained model or shortcut name.")
-
+    parser.add_argument(
+        "--model_name_or_path",
+        default=None,
+        type=str,
+        required=True,
+        help="Path to pre-trained model or shortcut name.",
+    )
     parser.add_argument(
         "--output_dir",
         default=None,
         type=str,
         required=True,
-        help=
-        "The output directory where the model predictions and checkpoints will be written.",
+        help="The output directory where the model predictions "
+        "and checkpoints will be written.",
     )
-
-    # NOTE: label related
-    parser.add_argument("--label_map_config",
-                        default=None,
-                        type=str,
-                        help="label_map_path.")
-    parser.add_argument("--label_map",
-                        default=None,
-                        type=dict,
-                        help="label map.")
-
-    # Other parameters
+    parser.add_argument(
+        "--embed_path",
+        default=None,
+        type=str,
+        required=True,
+        help="Embedding path",
+    )
     parser.add_argument(
         "--cache_dir",
         default="",
         type=str,
-        help=
-        "Where do you want to store the pre-trained models downloaded from s3",
+        help="Cache data binary data or other files",
     )
 
+    # Other parameters
     parser.add_argument("--train_batch_size",
                         default=8,
                         type=int,
@@ -55,9 +51,21 @@ def get_args():
                         default=8,
                         type=int,
                         help="Batch size per GPU/CPU for evaluation.")
-
+    # Model config
+    parser.add_argument("--num_labels",
+                        default=5,
+                        type=int,
+                        help="Number of labels")
+    parser.add_argument("--vocab_size",
+                        default=400000,
+                        type=int,
+                        help="Size of vocabulary")
+    parser.add_argument("--dropout",
+                        default=0.1,
+                        type=float,
+                        help="dropout prob")
     parser.add_argument("--learning_rate",
-                        default=5e-5,
+                        default=1e-3,
                         type=float,
                         help="The initial learning rate for Adam.")
     parser.add_argument("--adam_epsilon",
@@ -69,10 +77,9 @@ def get_args():
                         type=float,
                         help="Max gradient norm.")
     parser.add_argument("--num_train_epochs",
-                        default=3.0,
-                        type=float,
+                        default=5,
+                        type=int,
                         help="Total number of training epochs to perform.")
-
     parser.add_argument("--warmup_steps",
                         default=0,
                         type=int,

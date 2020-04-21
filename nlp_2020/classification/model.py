@@ -8,12 +8,12 @@ class TextClassifier(nn.Module):
     def __init__(
         self,
         vocab_size,
-        hidden_dim,
         output_dim,
-        pad_idx,
         n_layers=2,
+        pad_idx=None,
+        hidden_dim=128,
         embed_dim=300,
-        dropout_prob=0.1,
+        dropout=0.1,
         bidirectional=False,
     ):
         super().__init__()
@@ -30,7 +30,7 @@ class TextClassifier(nn.Module):
             bidirectional=bidirectional,
             dropout=dropout,
         )
-        self.dropout = nn.Dropout(p=dropout_prob)
+        self.dropout = nn.Dropout(p=dropout)
         self.linear = nn.Linear(hidden_dim * n_layers * num_directions,
                                 output_dim)
 
@@ -42,7 +42,7 @@ class TextClassifier(nn.Module):
         # h_n: (num_layers * num_directions, batch_size, hidden_size)
         # NOTE: take the last hidden state of encoder as in seq2seq architecture.
         hidden_states, (h_n, c_c) = self.lstm(x)
-        h_n = torch.transpose(self.dropout(h_n), 0, 1)
+        h_n = torch.transpose(self.dropout(h_n), 0, 1).contiguous()
         # h_n:(batch_size, hidden_size * num_layers * num_directions)
         h_n = h_n.view(h_n.shape[0], -1)
         loggits = self.linear(h_n)
